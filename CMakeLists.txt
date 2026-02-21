@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.30)
 project(analyzer VERSION 1.0.0 LANGUAGES CXX)
 
+cmake_policy(SET CMP0167 OLD) # Восстанавливает нормальный способ поиска Boost'а с помощью собственного поискового модуля FindBoost.cmake.
+
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)

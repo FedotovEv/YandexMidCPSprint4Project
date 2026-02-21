@@ -1,5 +1,5 @@
 #pragma once
-#include <unistd.h>
+//#include <unistd.h>
 
 #include <algorithm>
 #include <array>
@@ -18,14 +18,15 @@
 
 #include "metric.hpp"
 
-namespace analyzer::metric::metric_impl {
+namespace analyzer::metric::metric_impl
+{
+    struct CodeLinesCountMetric final : IMetric
+    {
+        static inline const std::string kName = "Code lines count";
 
-struct CodeLinesCountMetric final : IMetric {
-    static inline const std::string kName = "Code lines count";
+    protected:
+        std::string Name() const override;
 
-protected:
-    std::string Name() const override;
-
-    MetricResult::ValueType CalculateImpl(const function::Function& f) const override;};
-
+        MetricResult::ValueType CalculateImpl(const function::Function& f) const override;
+    };
 }  // namespace analyzer::metric::metric_impl

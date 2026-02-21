@@ -13,6 +13,7 @@ add_library(metric
     metric_impl/code_lines_count.cpp
     metric_impl/cyclomatic_complexity.cpp
     metric_impl/parameters_count.cpp
+    metric_impl/naming_style.cpp
 )
 
 target_link_libraries(metric
@@ -24,6 +25,7 @@ add_library(metric_accumulator
     metric_accumulator.cpp
     metric_accumulator_impl/average_accumulator.cpp
     metric_accumulator_impl/sum_average_accumulator.cpp
+    metric_accumulator_impl/categorical_accumulator.cpp
 )
 
 target_link_libraries(metric_accumulator
