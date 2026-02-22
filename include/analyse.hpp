@@ -44,7 +44,9 @@ namespace analyzer
     {
         auto functions_for_file = files | rv::transform([&sitter_opt](const std::string& next_file) -> std::vector<function::Function>
             {
-                file::File parsed_file(next_file, sitter_opt.tree_sitter_path, sitter_opt.tree_sitter_config_path);
+                std::string real_next_file = sitter_opt.use_common_files_path ?
+                    (fs::path(sitter_opt.common_files_path) / fs::path(next_file)).string() : next_file;
+                file::File parsed_file(real_next_file, sitter_opt.tree_sitter_path, sitter_opt.tree_sitter_config_path);
                 return function::FunctionExtractor{}.Get(parsed_file);
             }) |
             rv::join |

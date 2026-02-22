@@ -15,9 +15,9 @@ struct TreeSitterOpt
 {
     std::string_view tree_sitter_path;
     std::string_view tree_sitter_config_path;
-    //
+    // Управление общим путевым префиксов всех исполняемых файлов.
     std::string_view common_files_path;
-    bool use_common_files_path = false;
+    bool use_common_files_path = false; // Общий префикс применяется.
 };
 
 inline TreeSitterOpt GetTriSitterOpt()
