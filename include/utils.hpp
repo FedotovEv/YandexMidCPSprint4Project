@@ -5,65 +5,53 @@
 #include <string>
 #include <string_view>
 #include <ranges>
+#include <filesystem>
 
 namespace rv = std::ranges::views;
 namespace rs = std::ranges;
+namespace fs = std::filesystem;
 
 #define ZERO_TOLERANCE 1E-7
 
 struct TreeSitterOpt
 {
-    std::string_view tree_sitter_path;
-    std::string_view tree_sitter_config_path;
-    // ���������� ����� ������� ��������� ���� ����������� ������.
-    std::string_view common_files_path;
-    bool use_common_files_path = false; // ����� ������� �����������.
+    #ifdef _WIN32
+        static constexpr const char TREE_SITTER_DEFAULT_EXE[] = "tree_sitter.exe";
+        static constexpr char PATH_DIVISOR = ';';
+    #else
+        static constexpr const char TREE_SITTER_DEFAULT_EXE[] = "tree_sitter";
+        static constexpr char PATH_DIVISOR = ':';
+    #endif
+    static constexpr const char TREE_SITTER_DEFAULT_CONFIG[] = "config.json";
+    static constexpr const char TREE_SITTER_ENV_VAR[] = "TREE-SITTER";
+    static constexpr const char TREE_SITTER_CFG_ENV_VAR[] = "TREE-SITTER-CFG";
+    static constexpr const char TREE_SITTER_PARSERS_ENV_VAR[] = "TREE-SITTER-PARSERS";
+
+    std::string tree_sitter_exec;           // Полный маршрут и имя исполняемого файла древолаза.
+    std::string tree_sitter_config;         // Маршрут и имя, под которым находится файл конфигурации древолаза.
+    std::string common_files_path_prefix;   // Общий префикс пути всех обрабатываемых файлов.
 };
 
-inline TreeSitterOpt GetTriSitterOpt()
-{
-    char* tree_sitter_path = std::getenv("TREE-SITTER");
-    if (!tree_sitter_path)
-        throw std::runtime_error("Tree-sitter �� ������");
+// Функция поиска исполняемого модуля утилиты-построителя синтаксических деревьев.
+// Сначала его пытаются обнаружить по маршруту trst_fullexe_hint, если он задан. Затем делается попытка выявить переменную
+// окружения TREE_SITTER_ENV_VARIABLE, ответственную за хранение этого пути. Последний этап - поиск в PATH. Для такой операции
+// требуется знать имя исполняемого файла, которое принимается равным tree_sitter_exename_only или TREE_SITTER_DEFAULT_EXE,
+// если trst_exename_only не указан. В случае неудачи на всех этапах возвращается пустая строка.
+std::string FindTreeSitterExec
+    (const std::string& trst_fullexe_hint = {}, const std::string& trst_exename_only = {}, bool is_hint_strict = false);
 
-    std::string* tree_sitter_path_p = new std::string(tree_sitter_path);
+// Функция поиска файла конфигурации древолаза. Сначала делается попытка проверить её наличие по маршруту trst_cfgname_hint,
+// затем по указаниям переменной окружения TREE_SITTER_CFG_ENV_VAR, а затем - в PATH.
+// В случае неудачи на всех этапах опять возвращается пустая строка.
+std::string FindTreeSitterCfg
+    (const std::string& trst_cfgname_hint = {}, const std::string& trst_fullexe = {}, bool is_hint_strict = false);
 
-    TreeSitterOpt result;
-    result.tree_sitter_path = *tree_sitter_path_p;
-    result.tree_sitter_config_path = *tree_sitter_path_p;
-    result.common_files_path = *tree_sitter_path_p;
-    return result;
-}
+// Функция дополняет краткие имена обрабатываемых файлов file_names до полных в соответствии с параметрами tree_sitter_opt.
+std::vector<std::string> ExpandFileNamesWithPath(const std::vector<std::string>& file_names, const TreeSitterOpt& tree_sitter_opt);
 
-inline std::vector<std::string> ConstructFileNamesWithPath(const std::vector<std::string>& file_names, const TreeSitterOpt& tree_sitter_opt)
-{
-    auto file_path_names = file_names | rv::transform([&tree_sitter_opt](const std::string& filename) -> std::string
-        {
-            return std::string(tree_sitter_opt.tree_sitter_path) + '\\' + filename;
-        });
-    return rs::to<std::vector<std::string>>(file_path_names);
-}
+// Удаление пробельных символов с начала и конца аргумента value.
+std::string_view TrimView(std::string_view value);
+std::string TrimString(const std::string& value);
 
-inline std::string_view TrimView(std::string_view value)
-{
-    std::string_view result = value;
-
-    while (result.size() && std::isspace(result.front()))
-        result.remove_prefix(1);
-
-    while (result.size() && std::isspace(result.back()))
-        result.remove_suffix(1);
-
-    return result;
-}
-
-inline int ToInt(std::string_view value)
-{
-    std::string_view trimmed_val = TrimView(value);
-    int result{};
-    auto [parse_end_ptr, error_code] = std::from_chars(trimmed_val.data(), trimmed_val.data() + trimmed_val.size(), result);
-    if (error_code != std::errc{} || parse_end_ptr != trimmed_val.data() + trimmed_val.size())
-        throw std::invalid_argument("Cannot convert '" + std::string(value) + "' to integral");
-
-    return result;
-}
+// Преобразование к целочисленному значению внутренного содержания строки value.
+int ToInt(std::string_view value);

@@ -44,10 +44,8 @@ File::File(const std::string& filename, std::string_view tree_sitter_path, std::
     std::string File::GetAst(const std::string &filename)
     try
     {
-        std::string full_cmd = (fs::path(tree_sitter_path_) /  fs::path(tree_sitter_exe_name)).string() +
-                               ' ' + File::tree_sitter_param_prefix + ' ' +
-                               (fs::path(tree_sitter_config_path_) / fs::path(tree_sitter_config_file)).string() +
-                               ' ' + filename + " 2>&1";
+        std::string full_cmd = tree_sitter_path_ + ' ' + File::tree_sitter_param_prefix +
+                               ' ' + tree_sitter_config_path_ + ' ' + filename + " 2>&1";
         std::string result;
         std::array<char, 256> buffer;
 

@@ -6,6 +6,7 @@ add_library(function
 
 add_library(file
     file.cpp
+    utils.cpp
 )
 
 add_library(metric
@@ -19,6 +20,14 @@ add_library(metric
 target_link_libraries(metric
     PUBLIC
         function
+)
+
+add_library(test_database
+    test_database.cpp
+)
+target_include_directories(test_database
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 add_library(metric_accumulator

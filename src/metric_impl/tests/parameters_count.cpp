@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include "analyse.hpp"
 #include "utils.hpp"
+#include "test_database.hpp"
 
 using namespace std::literals;
 
@@ -19,7 +20,10 @@ struct FunctionParamsCount
 using FunctionParamsCountV = std::vector<FunctionParamsCount>;
 
 class OneMetricParamsCountSuite : public ::testing::TestWithParam<std::tuple<std::string, FunctionParamsCountV>>
-{};
+{
+public:
+    TestDatabase test_db;
+};
 
 namespace analyzer::metric::metric_impl
 {
@@ -30,15 +34,15 @@ namespace analyzer::metric::metric_impl
     TEST_P(OneMetricParamsCountSuite, Func)
     {
         auto [filename, metric_results] = GetParam();
-
+        // Сначала вычисляем параметры настроек tree-sitter'а и создаём временный файл конфигурации, необходимый для его работы.
+        TreeSitterOpt use_tree_sitter_opt = test_db.MakeTestTriSitterOpt(::testing::internal::GetArgvs()[0]);
+        // Создадим подопытного кролика с ключом filename из базы данных test_db.
+        test_db.CreateTestFile(filename);
         // Готовим к работе вычислитель количества кодосодержащих строк программного файла.
         analyzer::metric::MetricExtractor metric_extractor;
         metric_extractor.RegisterMetric(std::make_unique<CountParametersMetric>());
-        // "Доготавливаем" имя испытательного файла.
-        TreeSitterOpt use_tree_sitter_opt = GetTriSitterOpt();
-        std::vector<std::string> test_file_pathname = ConstructFileNamesWithPath({filename}, use_tree_sitter_opt);
         // ----- Вычисляем интересующую нас метрику (CountParametersMetric) для каждой функции входного файла.
-        auto file_analysis = AnalyseFunctions(test_file_pathname, use_tree_sitter_opt, metric_extractor);
+        auto file_analysis = AnalyseFunctions({filename}, use_tree_sitter_opt, metric_extractor);
         rs::for_each(file_analysis, [&metric_results](const auto& func_metric)
             {
                 auto metric_result_for_func_it = rs::find(metric_results, func_metric.first.name, &FunctionParamsCount::function_name);

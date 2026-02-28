@@ -10,6 +10,7 @@
 #include "metric_impl/metrics.hpp"
 #include "analyse.hpp"
 #include "utils.hpp"
+#include "test_database.hpp"
 
 using namespace std::literals;
 
@@ -17,6 +18,8 @@ class MetricsNameCategorySuite : public ::testing::TestWithParam<std::tuple<std:
 {
 public:
     static constexpr std::array<std::string_view, 5> DETECTED_NAMING_STYLES = {"Snake Case"sv, "Pascal Case"sv, "Camel Case"sv, "Lower Case"sv, "Unknown"sv};
+
+    TestDatabase test_db;
 };
 
 namespace analyzer::metric_accumulator::metric_accumulator_impl::test
@@ -28,6 +31,8 @@ namespace analyzer::metric_accumulator::metric_accumulator_impl::test
     TEST_P(MetricsNameCategorySuite, IdentCategoryDistribution)
     {
         auto [filename, snake_case_count, pascal_case_count, camel_case_count, lower_case_count, unknown_case_count] = GetParam();
+        // Сначала вычисляем параметры настроек tree-sitter'а и создаём временный файл конфигурации, необходимый для его работы.
+        TreeSitterOpt use_tree_sitter_opt = test_db.MakeTestTriSitterOpt(::testing::internal::GetArgvs()[0]);
 
         // Готовим к работе вычислитель количества кодосодержащих строк программного файла.
         analyzer::metric::MetricExtractor metric_extractor;
@@ -37,12 +42,10 @@ namespace analyzer::metric_accumulator::metric_accumulator_impl::test
         analyzer::metric_accumulator::MetricsAccumulator accumulator;
         accumulator.RegisterAccumulator(NamingStyleMetric::kName, std::make_unique<CategoricalAccumulator>());
 
-        // "Доготавливаем" имя испытательного файла.
-        TreeSitterOpt use_tree_sitter_opt = GetTriSitterOpt();
-        std::vector<std::string> test_file_pathname = ConstructFileNamesWithPath({filename}, use_tree_sitter_opt);
-
+        // Готовим очередной (текущий) испытательный файл.
+        test_db.CreateTestFile(filename);
         // ----- Вычисляем интересующую нас метрику (NamingStyleMetric) для каждой функции входного файла.
-        auto file_analysis = AnalyseFunctions(test_file_pathname, use_tree_sitter_opt, metric_extractor);
+        auto file_analysis = AnalyseFunctions({filename}, use_tree_sitter_opt, metric_extractor);
         // А затем подводим итоги, строя категориальное распределение (гистограмму) для всего файла.
         AccumulateFunctionAnalysis(file_analysis, accumulator);
         auto file_accumulated_data = accumulator.GetFinalizedAccumulator<CategoricalAccumulator>(NamingStyleMetric::kName).Get();

@@ -12,6 +12,10 @@ namespace analyzer::cmd
     class ProgramOptions
     {
     public:
+
+        static constexpr char EXE_PATH_PATTERN[] = "$$$_EXE";
+        static constexpr char TREE_SITTER_PATH_PATTERN[] = "$$$_TREE_SITTER";
+
         ProgramOptions();
         ~ProgramOptions();
 
@@ -25,16 +29,14 @@ namespace analyzer::cmd
         TreeSitterOpt GetTreeSitterOpt() const
         {
             return TreeSitterOpt
-                {.tree_sitter_path = tree_sitter_path_, .tree_sitter_config_path = tree_sitter_config_path_,
-                 .common_files_path = common_files_path_, .use_common_files_path = use_common_files_path_};
+                {.tree_sitter_exec = tree_sitter_path_, .tree_sitter_config = tree_sitter_config_path_,
+                 .common_files_path_prefix = common_files_path_};
         }
 
     private:
         std::string tree_sitter_path_;
         std::string tree_sitter_config_path_;
-        //
         std::string common_files_path_;
-        bool use_common_files_path_ = false;
         std::vector<std::string> files_;
         //
         boost::program_options::options_description desc_;

@@ -9,11 +9,15 @@
 #include "metric_impl/metrics.hpp"
 #include "analyse.hpp"
 #include "utils.hpp"
+#include "test_database.hpp"
 
 // Параметризованный стенд для теста усредняющкго аккумулятора трёх разных метрик набора исходный Питонофайлов - количества кодовых
 // строк, числа аргументов функции и их цикломатической сложности.
 class MetricsAveragingSuite : public ::testing::TestWithParam<std::tuple<std::string, double, double, double>>
-{};
+{
+public:
+    TestDatabase test_db;
+};
 
 namespace analyzer::metric_accumulator::metric_accumulator_impl::test
 {
@@ -27,6 +31,8 @@ namespace analyzer::metric_accumulator::metric_accumulator_impl::test
     {
         auto [filename, correct_avg_codelines, correct_avg_functios_argums, correct_avg_func_cycl_cmlx] = GetParam();
 
+        // Сначала вычисляем параметры настроек tree-sitter'а и создаём временный файл конфигурации, необходимый для его работы.
+        TreeSitterOpt use_tree_sitter_opt = test_db.MakeTestTriSitterOpt(::testing::internal::GetArgvs()[0]);
         analyzer::metric::MetricExtractor metric_extractor;
         // Регистрируем все три имеющихся численных метрики, которые возиожно усреднить.
         metric_extractor.RegisterMetric(std::make_unique<CodeLinesCountMetric>());
@@ -39,10 +45,9 @@ namespace analyzer::metric_accumulator::metric_accumulator_impl::test
         accumulator.RegisterAccumulator(CountParametersMetric::kName, std::make_unique<AverageAccumulator>());
         accumulator.RegisterAccumulator(CyclomaticComplexityMetric::kName, std::make_unique<AverageAccumulator>());
 
-        // Готовим очередной (текущий) испытательный файл.
-        TreeSitterOpt use_tree_sitter_opt = GetTriSitterOpt();
-        std::vector<std::string> test_file_pname = ConstructFileNamesWithPath({filename}, use_tree_sitter_opt);
-        auto file_analysis = AnalyseFunctions(test_file_pname, use_tree_sitter_opt, metric_extractor);
+        // Готовим и разбираем очередной (текущий) испытательный файл.
+        test_db.CreateTestFile(filename);
+        auto file_analysis = AnalyseFunctions({filename}, use_tree_sitter_opt, metric_extractor);
         // -----
         AccumulateFunctionAnalysis(file_analysis, accumulator);
         auto codelines_accumulated_data = accumulator.GetFinalizedAccumulator<AverageAccumulator>(CodeLinesCountMetric::kName).Get();

@@ -7,13 +7,26 @@
 #include "metric_impl/metrics.hpp"
 #include "analyse.hpp"
 #include "utils.hpp"
+#include <test_database.hpp>
+
+class CodeLineSummingFixture : public ::testing::Test
+{
+public:
+    TestDatabase test_db;
+};
 
 // Параметризованный стенд для теста суммирующего аккумулятора метрики количества параметров функций и методов.
 class CountParametersSummningSuite : public ::testing::TestWithParam<std::tuple<std::string, int>>
-{};
+{
+public:
+    TestDatabase test_db;
+};
 // Параметризованный стенд для теста суммирующего аккумулятора метрики цикломатической сложности функций.
 class CyclomaticComplexitySummningSuite : public ::testing::TestWithParam<std::tuple<std::string, int>>
-{};
+{
+public:
+    TestDatabase test_db;
+};
 
 namespace analyzer::metric_accumulator::metric_accumulator_impl::test
 {
@@ -23,8 +36,11 @@ namespace analyzer::metric_accumulator::metric_accumulator_impl::test
 
     // Непараметризованный групповой тест суммирующего аккумулятора метрик на материале подсчёта количества
     // содержательных строк набора Питонофайлов.
-    TEST(SummAccumulatorTests, CodeLineSummning)
+    TEST_F(CodeLineSummingFixture, CodeLineSummning)
     {
+        // Сначала вычисляем параметры настроек tree-sitter'а и создаём временный файл конфигурации, необходимый для его работы.
+        TreeSitterOpt use_tree_sitter_opt = test_db.MakeTestTriSitterOpt(::testing::internal::GetArgvs()[0]);
+        // Список образцов, которые будут задействованы в этом тесте.
         std::vector<std::pair<std::string, int>> test_files_data{{"if.py", 3}, {"comments.py",  3}, {"many_lines.py", 11}};
         // Готовим к работе вычислитель количества кодосодержащих строк программного файла.
         analyzer::metric::MetricExtractor metric_extractor;
@@ -35,27 +51,18 @@ namespace analyzer::metric_accumulator::metric_accumulator_impl::test
         accumulator.RegisterAccumulator(CodeLinesCountMetric::kName, std::make_unique<SumAverageAccumulator>());
 
         // Готовим испытательные объекты.
-        TreeSitterOpt use_tree_sitter_opt = GetTriSitterOpt();
-        std::vector<std::string> first_test_file = ConstructFileNamesWithPath({test_files_data[0].first}, use_tree_sitter_opt);
-        std::vector<std::string> second_test_file = ConstructFileNamesWithPath({test_files_data[1].first}, use_tree_sitter_opt);
-        std::vector<std::string> third_test_file = ConstructFileNamesWithPath({test_files_data[2].first}, use_tree_sitter_opt);
+        test_db.CreateTestFile(test_files_data[0].first);
+        test_db.CreateTestFile(test_files_data[1].first);
+        test_db.CreateTestFile(test_files_data[2].first);
 
-        auto test_files_view = test_files_data | rv::transform([](const auto& data_air) -> std::string
+        std::vector<std::string> all_test_files = test_files_data | rv::transform([](const auto& data_air) -> std::string
             {
                 return data_air.first;
-            });
-        std::vector<std::string> all_test_files = ConstructFileNamesWithPath
-            (rs::to<std::vector<std::string>>(test_files_view), use_tree_sitter_opt);
+            }) | rs::to<std::vector<std::string>>();
         
-        auto test_files_summ_view = test_files_data | rv::transform([](const auto& data_air) -> int
-            {
-                return data_air.second;
-            });
-        std::vector<int> all_test_files_summ = rs::to<std::vector<int>>(test_files_summ_view);
-
-        auto first_analysis = AnalyseFunctions(first_test_file, use_tree_sitter_opt, metric_extractor);
-        auto second_analysis = AnalyseFunctions(second_test_file, use_tree_sitter_opt, metric_extractor);
-        auto third_analysis = AnalyseFunctions(third_test_file, use_tree_sitter_opt, metric_extractor);
+        auto first_analysis = AnalyseFunctions({test_files_data[0].first}, use_tree_sitter_opt, metric_extractor);
+        auto second_analysis = AnalyseFunctions({test_files_data[1].first}, use_tree_sitter_opt, metric_extractor);
+        auto third_analysis = AnalyseFunctions({test_files_data[2].first}, use_tree_sitter_opt, metric_extractor);
         auto all_analysis = AnalyseFunctions(all_test_files, use_tree_sitter_opt, metric_extractor);
 
         // -----
@@ -75,9 +82,9 @@ namespace analyzer::metric_accumulator::metric_accumulator_impl::test
         auto all_accumulated_data = accumulator.GetFinalizedAccumulator<SumAverageAccumulator>(CodeLinesCountMetric::kName).Get();
         accumulator.ResetAccumulators();
         // Сверка полученных результатов расчёта метрик с вычисленными вручную заведомо верными значениями.
-        EXPECT_EQ(first_accumulated_data.sum, all_test_files_summ[0]);
-        EXPECT_EQ(second_accumulated_data.sum, all_test_files_summ[1]);
-        EXPECT_EQ(third_accumulated_data.sum, all_test_files_summ[2]);
+        EXPECT_EQ(first_accumulated_data.sum, test_files_data[0].second);
+        EXPECT_EQ(second_accumulated_data.sum, test_files_data[1].second);
+        EXPECT_EQ(third_accumulated_data.sum, test_files_data[2].second);
         EXPECT_EQ(first_accumulated_data.sum + second_accumulated_data.sum + third_accumulated_data.sum, all_accumulated_data.sum);
     }
 
@@ -87,6 +94,8 @@ namespace analyzer::metric_accumulator::metric_accumulator_impl::test
     {
         auto [filename, correct_functions_param_count] = GetParam();
 
+        // Сначала вычисляем параметры настроек tree-sitter'а и создаём временный файл конфигурации, необходимый для его работы.
+        TreeSitterOpt use_tree_sitter_opt = test_db.MakeTestTriSitterOpt(::testing::internal::GetArgvs()[0]);
         analyzer::metric::MetricExtractor metric_extractor;
         // Регистрируем единственную метрику - количество параметров функции.
         metric_extractor.RegisterMetric(std::make_unique<CountParametersMetric>());
@@ -95,10 +104,9 @@ namespace analyzer::metric_accumulator::metric_accumulator_impl::test
         analyzer::metric_accumulator::MetricsAccumulator accumulator;
         accumulator.RegisterAccumulator(CountParametersMetric::kName, std::make_unique<SumAverageAccumulator>());
 
-        // Готовим испытательные объекты.
-        TreeSitterOpt use_tree_sitter_opt = GetTriSitterOpt();
-        std::vector<std::string> test_file_pname = ConstructFileNamesWithPath({filename}, use_tree_sitter_opt);
-        auto file_analysis = AnalyseFunctions(test_file_pname, use_tree_sitter_opt, metric_extractor);
+        // Готовим (создаём) испытательный объект.
+        test_db.CreateTestFile(filename);
+        auto file_analysis = AnalyseFunctions({filename}, use_tree_sitter_opt, metric_extractor);
         // -----
         AccumulateFunctionAnalysis(file_analysis, accumulator);
         auto first_accumulated_data = accumulator.GetFinalizedAccumulator<SumAverageAccumulator>(CountParametersMetric::kName).Get();
@@ -122,6 +130,8 @@ namespace analyzer::metric_accumulator::metric_accumulator_impl::test
     {
         auto [filename, correct_functions_param_count] = GetParam();
 
+        // Сначала вычисляем параметры настроек tree-sitter'а и создаём временный файл конфигурации, необходимый для его работы.
+        TreeSitterOpt use_tree_sitter_opt = test_db.MakeTestTriSitterOpt(::testing::internal::GetArgvs()[0]);
         analyzer::metric::MetricExtractor metric_extractor;
         // Регистрируем единственную метрику - цикломатическую сложность функции.
         metric_extractor.RegisterMetric(std::make_unique<CyclomaticComplexityMetric>());
@@ -131,9 +141,8 @@ namespace analyzer::metric_accumulator::metric_accumulator_impl::test
         accumulator.RegisterAccumulator(CyclomaticComplexityMetric::kName, std::make_unique<SumAverageAccumulator>());
 
         // Проводим некоторую предобработку очередного испытательного файла.
-        TreeSitterOpt use_tree_sitter_opt = GetTriSitterOpt();
-        std::vector<std::string> test_file_pname = ConstructFileNamesWithPath({filename}, use_tree_sitter_opt);
-        auto file_analysis = AnalyseFunctions(test_file_pname, use_tree_sitter_opt, metric_extractor);
+        test_db.CreateTestFile(filename);
+        auto file_analysis = AnalyseFunctions({filename}, use_tree_sitter_opt, metric_extractor);
         // -----
         AccumulateFunctionAnalysis(file_analysis, accumulator);
         auto first_accumulated_data = accumulator.GetFinalizedAccumulator<SumAverageAccumulator>(CyclomaticComplexityMetric::kName).Get();

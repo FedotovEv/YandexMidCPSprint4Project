@@ -14,6 +14,7 @@ target_link_libraries(${target}
         metric
         function
         file
+        test_database
 )
 
 file(GLOB test_files "${CMAKE_CURRENT_SOURCE_DIR}/tests/files/*.py")

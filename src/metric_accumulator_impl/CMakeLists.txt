@@ -15,6 +15,7 @@ target_link_libraries(${target}
         metric_accumulator
         function
         file
+        test_database
 )
 
 add_test(NAME ${target} COMMAND ${target})
