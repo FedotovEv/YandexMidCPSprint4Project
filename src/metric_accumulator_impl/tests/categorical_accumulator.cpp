@@ -31,26 +31,26 @@ namespace analyzer::metric_accumulator::metric_accumulator_impl::test
     TEST_P(MetricsNameCategorySuite, IdentCategoryDistribution)
     {
         auto [filename, snake_case_count, pascal_case_count, camel_case_count, lower_case_count, unknown_case_count] = GetParam();
-        // Сначала вычисляем параметры настроек tree-sitter'а и создаём временный файл конфигурации, необходимый для его работы.
+        // РЎРЅР°С‡Р°Р»Р° РІС‹С‡РёСЃР»СЏРµРј РїР°СЂР°РјРµС‚СЂС‹ РЅР°СЃС‚СЂРѕРµРє tree-sitter'Р° Рё СЃРѕР·РґР°С‘Рј РІСЂРµРјРµРЅРЅС‹Р№ С„Р°Р№Р» РєРѕРЅС„РёРіСѓСЂР°С†РёРё, РЅРµРѕР±С…РѕРґРёРјС‹Р№ РґР»СЏ РµРіРѕ СЂР°Р±РѕС‚С‹.
         TreeSitterOpt use_tree_sitter_opt = test_db.MakeTestTriSitterOpt(::testing::internal::GetArgvs()[0]);
 
-        // Готовим к работе вычислитель количества кодосодержащих строк программного файла.
+        // Р“РѕС‚РѕРІРёРј Рє СЂР°Р±РѕС‚Рµ РІС‹С‡РёСЃР»РёС‚РµР»СЊ РєРѕР»РёС‡РµСЃС‚РІР° РєРѕРґРѕСЃРѕРґРµСЂР¶Р°С‰РёС… СЃС‚СЂРѕРє РїСЂРѕРіСЂР°РјРјРЅРѕРіРѕ С„Р°Р№Р»Р°.
         analyzer::metric::MetricExtractor metric_extractor;
         metric_extractor.RegisterMetric(std::make_unique<NamingStyleMetric>());
 
-        // Создаём и регистрируем сумматор метрики количества кодовых строк.
+        // РЎРѕР·РґР°С‘Рј Рё СЂРµРіРёСЃС‚СЂРёСЂСѓРµРј СЃСѓРјРјР°С‚РѕСЂ РјРµС‚СЂРёРєРё РєРѕР»РёС‡РµСЃС‚РІР° РєРѕРґРѕРІС‹С… СЃС‚СЂРѕРє.
         analyzer::metric_accumulator::MetricsAccumulator accumulator;
         accumulator.RegisterAccumulator(NamingStyleMetric::kName, std::make_unique<CategoricalAccumulator>());
 
-        // Готовим очередной (текущий) испытательный файл.
+        // Р“РѕС‚РѕРІРёРј РѕС‡РµСЂРµРґРЅРѕР№ (С‚РµРєСѓС‰РёР№) РёСЃРїС‹С‚Р°С‚РµР»СЊРЅС‹Р№ С„Р°Р№Р».
         test_db.CreateTestFile(filename);
-        // ----- Вычисляем интересующую нас метрику (NamingStyleMetric) для каждой функции входного файла.
+        // ----- Р’С‹С‡РёСЃР»СЏРµРј РёРЅС‚РµСЂРµСЃСѓСЋС‰СѓСЋ РЅР°СЃ РјРµС‚СЂРёРєСѓ (NamingStyleMetric) РґР»СЏ РєР°Р¶РґРѕР№ С„СѓРЅРєС†РёРё РІС…РѕРґРЅРѕРіРѕ С„Р°Р№Р»Р°.
         auto file_analysis = AnalyseFunctions({filename}, use_tree_sitter_opt, metric_extractor);
-        // А затем подводим итоги, строя категориальное распределение (гистограмму) для всего файла.
+        // Рђ Р·Р°С‚РµРј РїРѕРґРІРѕРґРёРј РёС‚РѕРіРё, СЃС‚СЂРѕСЏ РєР°С‚РµРіРѕСЂРёР°Р»СЊРЅРѕРµ СЂР°СЃРїСЂРµРґРµР»РµРЅРёРµ (РіРёСЃС‚РѕРіСЂР°РјРјСѓ) РґР»СЏ РІСЃРµРіРѕ С„Р°Р№Р»Р°.
         AccumulateFunctionAnalysis(file_analysis, accumulator);
         auto file_accumulated_data = accumulator.GetFinalizedAccumulator<CategoricalAccumulator>(NamingStyleMetric::kName).Get();
 
-        // Сверка полученного распределения с истинными значениями.
+        // РЎРІРµСЂРєР° РїРѕР»СѓС‡РµРЅРЅРѕРіРѕ СЂР°СЃРїСЂРµРґРµР»РµРЅРёСЏ СЃ РёСЃС‚РёРЅРЅС‹РјРё Р·РЅР°С‡РµРЅРёСЏРјРё.
         rs::for_each(file_accumulated_data, 
             [snake_case_count, pascal_case_count, camel_case_count, lower_case_count, unknown_case_count](const auto& naming_style_count_pair)
             {

@@ -22,7 +22,7 @@ namespace analyzer::file
     private:
         std::vector<std::string> ReadSourceFile(std::ifstream& file);
         std::string GetAst(const std::string& filename);
-        // Дополнительные настройки для процедуры вызова tree-sitter'а.
+        // Р”РѕРїРѕР»РЅРёС‚РµР»СЊРЅС‹Рµ РЅР°СЃС‚СЂРѕР№РєРё РґР»СЏ РїСЂРѕС†РµРґСѓСЂС‹ РІС‹Р·РѕРІР° tree-sitter'Р°.
         std::string tree_sitter_path_;
         std::string tree_sitter_config_path_;
     };
