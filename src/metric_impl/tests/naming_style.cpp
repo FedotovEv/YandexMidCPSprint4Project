@@ -48,12 +48,20 @@ namespace analyzer::metric::metric_impl
         rs::for_each(file_analysis, [&metric_results](const auto& func_metric)
             {
                 auto metric_result_for_func_it = rs::find(metric_results, func_metric.first.name, &FunctionNamingStyle::function_name);
-                // Требуем наличия найденной функции в списке metric_results, совпадения их стилей наименования с требуемым,
-                // а также правильное имя метрики (хотя последнее и тривиальность).
+                // Требуем наличия найденной функции в списке metric_results, причём встретиться она должна только однократно.
                 ASSERT_NE(metric_result_for_func_it, metric_results.end());
+                ASSERT_TRUE(metric_result_for_func_it->naming_style.size() > 0);
+                // Проверка рассчитанной метрики - совпадение стиля наименования функции с требуемым, а также правильное имя самой
+                // метрики (хотя последнее и тривиальность).
                 ASSERT_EQ(func_metric.second[0].metric_name, NamingStyleMetric::kName);
                 ASSERT_EQ(metric_result_for_func_it->naming_style, std::get<std::string>(func_metric.second[0].value));
+                // Пометим использованный эталон найденной функции с целью контроля возможных повторов и неполноты покрытия метриками.
+                metric_result_for_func_it->naming_style.clear();
             });
+        // Наконец, убедимся, что все ожидаемые в данном тестовом примере функции действительно были там обнаружены.
+        ASSERT_EQ(rs::find_if(metric_results,
+            [](const std::string& val) -> bool {return val.size() > 0;}, &FunctionNamingStyle::naming_style),
+            metric_results.end());
     }
 
     INSTANTIATE_TEST_SUITE_P

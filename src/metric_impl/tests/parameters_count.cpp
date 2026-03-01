@@ -46,12 +46,18 @@ namespace analyzer::metric::metric_impl
         rs::for_each(file_analysis, [&metric_results](const auto& func_metric)
             {
                 auto metric_result_for_func_it = rs::find(metric_results, func_metric.first.name, &FunctionParamsCount::function_name);
-                // Требуем наличия найденной функции в списке metric_results, совпадения их стилей наименования с требуемым,
-                // а также правильное имя метрики (хотя последнее и тривиальность).
+                // Требуем наличия найденной функции в списке metric_results, причём только однократного.
                 ASSERT_NE(metric_result_for_func_it, metric_results.end());
+                ASSERT_TRUE(metric_result_for_func_it->params_count >= 0);
+                // Проверка правильности рассчитанных значений метрики (количества параметров функции) и ее имени.
                 ASSERT_EQ(func_metric.second[0].metric_name, CountParametersMetric::kName);
                 ASSERT_EQ(metric_result_for_func_it->params_count, std::get<int>(func_metric.second[0].value));
+                // Пометка задействованного для этой функции эталонного элемента для последующего контроля полноты и уникальности покрытия
+                // функций тестового файла.
+                metric_result_for_func_it->params_count = -1;
             });
+        // Наконец, убедимся, что все ожидаемые в данном тестовом примере функции действительно были там обнаружены.
+        ASSERT_EQ(rs::find_if(metric_results, [](int val) -> bool {return val >= 0;}, &FunctionParamsCount::params_count), metric_results.end());
     }
 
     INSTANTIATE_TEST_SUITE_P

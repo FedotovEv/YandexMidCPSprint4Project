@@ -46,12 +46,20 @@ namespace analyzer::metric::metric_impl
         rs::for_each(file_analysis, [&metric_results](const auto& func_metric)
             {
                 auto metric_result_for_func_it = rs::find(metric_results, func_metric.first.name, &FunctionCyclomaticComplex::function_name);
-                // Требуем наличия найденной функции в списке metric_results, совпадения их стилей наименования с требуемым,
-                // а также правильное имя метрики (хотя последнее и тривиальность).
+                // Прежде всего, найденная функция должна быть среди ожидаемых в списке metric_results.
                 ASSERT_NE(metric_result_for_func_it, metric_results.end());
+                // Она не должна встретиться нам повторно.
+                ASSERT_TRUE(metric_result_for_func_it->cyclomatic_complexity >= 0);
+                // Проверяем правильность вычисленной метрики (цикломатической сложности функции) - её правильное имя (хотя это и
+                // тривиальность) и точное значение.
                 ASSERT_EQ(func_metric.second[0].metric_name, CyclomaticComplexityMetric::kName);
                 ASSERT_EQ(metric_result_for_func_it->cyclomatic_complexity, std::get<int>(func_metric.second[0].value));
+                // Пометим условным значением использованный элемент в списке эталонов для целей контроля полноты покрытия
+                // всех функций тестового модуля и отсутствия в составе результатов дубликатов метрик.
+                metric_result_for_func_it->cyclomatic_complexity = -1;
             });
+        // Наконец, убедимся, что все ожидаемые в данном тестовом примере функции действительно были там обнаружены.
+        ASSERT_EQ(rs::find_if(metric_results, [](int val) -> bool {return val >= 0;}, &FunctionCyclomaticComplex::cyclomatic_complexity), metric_results.end());
     }
 
     INSTANTIATE_TEST_SUITE_P
