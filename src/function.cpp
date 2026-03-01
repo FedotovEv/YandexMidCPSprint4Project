@@ -1,6 +1,6 @@
 #include "function.hpp"
 
-#include <unistd.h>
+//#include <unistd.h>
 
 #include <algorithm>
 #include <array>
@@ -24,19 +24,23 @@ namespace fs = std::filesystem;
 namespace rv = std::ranges::views;
 namespace rs = std::ranges;
 
-namespace analyzer::function {
+namespace analyzer::function
+{
 
-std::vector<Function> FunctionExtractor::Get(const analyzer::file::File &file) {
+std::vector<Function> FunctionExtractor::Get(const analyzer::file::File &file)
+{
     std::vector<Function> functions;
     size_t start = 0;
     const std::string marker = "(function_definition";
     const std::string &ast = file.ast;
 
-    while ((start = ast.find(marker, start)) != std::string::npos) {
+    while ((start = ast.find(marker, start)) != std::string::npos)
+    {
         size_t open_braces = 1;
         size_t end = start + marker.length();
 
-        while (end < ast.size() && open_braces > 0) {
+        while (end < ast.size() && open_braces > 0)
+        {
             if (ast[end] == '(')
                 open_braces++;
             else if (ast[end] == ')')
@@ -51,9 +55,8 @@ std::vector<Function> FunctionExtractor::Get(const analyzer::file::File &file) {
         Function func{.filename = file.name, .class_name = std::nullopt, .name = func_name, .ast = func_ast};
 
         auto class_info = FindEnclosingClass(ast, name_loc);
-        if (class_info) {
+        if (class_info)
             func.class_name = GetClassNameFromSource(*class_info, file.source_lines);
-        }
 
         functions.push_back(func);
         start = end;

@@ -1,5 +1,5 @@
 #pragma once
-#include <unistd.h>
+//#include <unistd.h>
 
 #include <algorithm>
 #include <array>
@@ -18,21 +18,21 @@
 
 #include "metric_accumulator.hpp"
 
-namespace analyzer::metric_accumulator::metric_accumulator_impl {
+namespace analyzer::metric_accumulator::metric_accumulator_impl
+{
+    struct AverageAccumulator : public IAccumulator
+    {
+        void Accumulate(const metric::MetricResult &metric_result) override;
 
-struct AverageAccumulator : public IAccumulator {
-    void Accumulate(const metric::MetricResult &metric_result) override;
+        void Finalize() override;
 
-    void Finalize() override;
+        void Reset();
 
-    void Reset();
+        double Get() const;
 
-    double Get() const;
-
-private:
-    int sum = 0;
-    int count = 0;
-    double average = 0;
-};
-
+    private:
+        int sum = 0;
+        int count = 0;
+        double average = 0;
+    };
 }  // namespace analyzer::metric_accumulator::metric_accumulator_impl

@@ -4,6 +4,7 @@ add_executable(${target}
     tests/code_lines_count.cpp
     tests/cyclomatic_complexity.cpp
     tests/parameters_count.cpp
+    tests/naming_style.cpp
 )
 
 target_link_libraries(${target}
@@ -13,6 +14,7 @@ target_link_libraries(${target}
         metric
         function
         file
+        test_database
 )
 
 file(GLOB test_files "${CMAKE_CURRENT_SOURCE_DIR}/tests/files/*.py")
